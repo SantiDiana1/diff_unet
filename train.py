@@ -13,6 +13,7 @@ def main(args):
 
 if __name__ == '__main__': ## As it is the file to run, we add this line and we ask the user for several arguments for the training
     parser = ArgumentParser(description='train (or resume training) a DiffWave model')
+    parser.add_argument('--diffusion', default = True, help= 'do you wanna use diffusion?')
     parser.add_argument('--model-dir', default="./ckpt/",
         help='directory in which to store model checkpoints and training logs')
     parser.add_argument('--data-dir', default=None,

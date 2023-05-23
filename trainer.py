@@ -2,15 +2,11 @@ import torch
 from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim 
-from resunet import UNET
+#from unet import UNET
+from time_unet import UNET
 import numpy as np
-# from utils import (
-#     load_checkpoint,
-#     save_checkpoint,
-#     get_loaders,
-#     check_accuracy,
-#     save_predictions_as_images
-# )
+from reverser import ReverseProcess
+
 from dataset import from_path
 from utils import load_and_resample, compute_stft, compute_signal_from_stft2, prev_power_of_2
 
@@ -19,6 +15,8 @@ import random
 import math
 import museval
 import soundfile
+
+
 def _nested_map(struct, map_fn):
         if isinstance(struct, tuple):
             return tuple(_nested_map(x, map_fn) for x in struct)
@@ -30,7 +28,7 @@ def _nested_map(struct, map_fn):
 
 
 class Learner():
-    def __init__(self,model_dir, model, trainset, testset, optimizer, params, *args, **kwargs):
+    def __init__(self,model_dir, model,diffusion, trainset, testset, optimizer, params, *args, **kwargs):
         self.model_dir=model_dir
         self.model = model
         self.trainset = trainset
@@ -41,6 +39,21 @@ class Learner():
         self.loss_fn = nn.L1Loss()
         self.step=0
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
+        self.autocast = torch.cuda.amp.autocast(enabled=kwargs.get("fp16", False))
+        self.diffusion = diffusion
+
+
+        self.noise_schedule_mix = torch.tensor(
+            np.linspace(1, 0, self.params.iters + 1).astype(np.float32))  ##tensor([1.0000, 0.9167, 0.8333, 0.7500, 0.6667, 0.5833, 0.5000, 0.4167, 0.333, 0.2500, 0.1667, 0.0833, 0.0000])
+        self.noise_schedule_voc = torch.tensor(
+            np.linspace(1, 0, self.params.iters + 1).astype(np.float32))
+        
+
+        
+        ## Validation
+        self.vector_medians = [0]
+        self.best_SDR = 0
+        self.best_epoch = 0
 
     def state_dict(self): ## This returns a dictionary containing the current state of the model and optimizer, and some additional training parameters.
         # It is commonly used for save and load the state of a model during training or to transfer a model between different processes or machines. 
@@ -87,13 +100,12 @@ class Learner():
         mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
         mus=random.sample(mus,4)
         mus.append("/home/santi/datasets/musdb_test/raw_audio/Carlos Gonzalez - A Place For Us/mixture.wav")
-        vector_medians= []
         
-
         while True:
              with tqdm(total=len(self.trainset), desc=f"Epoch {self.step // len(self.trainset)}", leave=False) as pbar:
                 epoch_loss = 0
                 for features in self.trainset:
+                    #self.validation_inference(mus)
                     if max_steps is not None and self.step >= max_steps: ##Esto sirve para acabar cuando max_steps es None o cuando self.step se pasa de max_steps. 
                         return
                          
@@ -120,8 +132,8 @@ class Learner():
                     validation_loss.append(loss.item())
                 print("Validation loss:", np.mean(validation_loss))
 
-                if (self.step // len(self.trainset))%10==0:
-                    self.validation_inference(mus,vector_medians)
+                # if (self.step // len(self.trainset))%5==0:
+                #     self.validation_inference(mus)
                 
     def train_step (self,features):
 
@@ -132,10 +144,38 @@ class Learner():
         target = features["vocals"].to(self.device)
 
 
-        training_data = mixture
-        target_obj = target
-        predicted = self.model(training_data).to(self.device)
-        loss = self.loss_fn(target_obj, predicted.squeeze(1))
+        if self.diffusion is True:
+            N, _, _ = mixture.shape
+            self.noise_schedule_mix = self.noise_schedule_mix.to(self.device)
+            self.noise_schedule_voc = self.noise_schedule_voc.to(self.device)
+
+            with self.autocast:
+                t = torch.randint(1, self.params.iters + 1, [N], device=mixture.device)
+                t_next = t - 1
+                # Getting noise level at given timesteps
+                noise_level_mix = self.noise_schedule_mix[t].unsqueeze(1).unsqueeze(2) 
+                noise_level_voc = self.noise_schedule_voc[t].unsqueeze(1).unsqueeze(2)
+                
+                noise_level_next_mix = self.noise_schedule_mix[t_next].unsqueeze(1).unsqueeze(2)
+                noise_level_next_voc = self.noise_schedule_voc[t_next].unsqueeze(1).unsqueeze(2)
+                
+                training_data = noise_level_voc**0.5 * target \
+                    + (1.0 - noise_level_mix)**0.5 * mixture
+                
+                target_obj = noise_level_next_voc**0.5 * target \
+                    + (1.0 - noise_level_next_mix)**0.5 * mixture
+
+                predicted = self.model(training_data, t).to(self.device)
+
+                loss = self.loss_fn(target_obj, predicted.squeeze(1))
+        else:
+
+            t = None
+
+            training_data = mixture
+            target_obj = target
+            predicted = self.model(training_data,t).to(self.device)
+            loss = self.loss_fn(target_obj, predicted.squeeze(1))
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
@@ -153,22 +193,53 @@ class Learner():
         mixture = features["mix"].to(self.device)
         target = features["vocals"].to(self.device)
 
-        training_data = mixture
-        target_obj = target
-        predicted = self.model(training_data).to(self.device)
-        loss = self.loss_fn(target_obj, predicted.squeeze(1))
+        if self.diffusion is True:
+            N, _, _ = mixture.shape
+            self.noise_schedule_mix = self.noise_schedule_mix.to(self.device)
+            self.noise_schedule_voc = self.noise_schedule_voc.to(self.device)
+
+            with self.autocast:
+                t = torch.randint(1, self.params.iters + 1, [N], device=mixture.device)
+                t_next = t - 1
+                # Getting noise level at given timesteps
+                noise_level_mix = self.noise_schedule_mix[t].unsqueeze(1).unsqueeze(2) 
+                noise_level_voc = self.noise_schedule_voc[t].unsqueeze(1).unsqueeze(2)
+                
+                noise_level_next_mix = self.noise_schedule_mix[t_next].unsqueeze(1).unsqueeze(2)
+                noise_level_next_voc = self.noise_schedule_voc[t_next].unsqueeze(1).unsqueeze(2)
+                
+                training_data = noise_level_voc**0.5 * target \
+                    + (1.0 - noise_level_mix)**0.5 * mixture
+                
+                target_obj = noise_level_next_voc**0.5 * target \
+                    + (1.0 - noise_level_next_mix)**0.5 * mixture
+
+                predicted = self.model(training_data, t).to(self.device)
+
+                loss = self.loss_fn(target_obj, predicted.squeeze(1))
+        else:
+
+            t = None
+
+            training_data = mixture
+            target_obj = target
+            predicted = self.model(training_data).to(self.device)
+            loss = self.loss_fn(target_obj, predicted.squeeze(1))
 
         return loss
     
-    def validation_inference(self,mus,vector_medians):
+    def validation_inference(self,mus):
         print('Validating')
 
         entire_med_sdr_voc = []
         c=0
 
+        reverse_process = ReverseProcess(steps = self.params.iters, device=self.device)
+        reverse_process.model = self.model
+
 
         for count,filename in tqdm(enumerate(mus)):
-            print(filename, 'Filename')
+            print(filename, count, 'Filename')
             mixture = load_and_resample(filename)
             vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
 
@@ -206,7 +277,7 @@ class Learner():
                     mix_phase=mix_phase.to("cuda")
                     
                     #mix_mag=mix_mag.unsqueeze(1) #TODO: he añadido un unsqueeze porque sino peta el predict. 
-                    diff_res = self.model(mix_mag)
+                    diff_res = reverse_process.predict(mix_mag)
 
                     output_signal = diff_res[:, :mix_mag.shape[1], :]
                     #print(output_signal.shape,'shape stft')
@@ -238,7 +309,7 @@ class Learner():
             # Getting array of estimates
             c=c+1
             epoch = self.step // len(self.trainset)
-            soundfile.write(f"audios/audio{epoch}_{c}.wav", output_voice, 22050)
+            soundfile.write(f"audios_diff/audio{epoch}_{c}.wav", output_voice, 22050)
             estimates = np.array([output_voice])[..., None]
 
             scores = museval.evaluate(
@@ -252,8 +323,24 @@ class Learner():
 
         median_sdr_voc=np.median(entire_med_sdr_voc)
         print('All median SDR for vocals:',median_sdr_voc)
-        vector_medians.append(median_sdr_voc)
-        print(vector_medians)
+        
+        previous_maximum=max(self.vector_medians)
+        print(previous_maximum,'previous maximum')
+
+        if median_sdr_voc>previous_maximum:
+            self.best_SDR=median_sdr_voc
+            #model=self.model_dir
+            self.save_to_checkpoint("weights_bestSDR")
+            self.best_epoch=self.step//len(self.trainset)
+            print(f'I have saved a new model with the best SDR. It corresponds to epoch {self.best_epoch} with {self.best_SDR} of SDR')
+        
+        print(f'The best model corresponds to epoch {self.best_epoch}')
+        self.vector_medians.append(median_sdr_voc)
+        print(self.vector_medians)
+
+        with open('./results/SDR.txt', 'w') as file:
+            file.write(str(self.vector_medians))
+        
 
 def train(args, params):
     trainset, testset = from_path(args.data_dir, params)  ## Create trainset and testset from the dataset class.
@@ -267,7 +354,6 @@ def _train_impl(model, trainset, testset, args, params):
     torch.backends.cudnn.benchmark = True ## For faster execution times. 
     opt = torch.optim.Adam(model.parameters(), lr=params.learning_rate) ## Stochastic Gradient Descent
 
-    
-    learner = Learner(args.model_dir, model, trainset, testset, opt,params,fp16=args.fp16)
+    learner = Learner(args.model_dir, model, args.diffusion, trainset, testset, opt,params,fp16=args.fp16)
     learner.restore_from_checkpoint()
     learner.train(max_steps=args.max_steps)  ## Call to the train method of the Learner to start training process. 

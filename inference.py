@@ -3,7 +3,7 @@ from utils import load_and_resample, compute_signal_from_stft2, compute_stft, pr
 import math
 import torch
 import os
-from resunet import UNET
+from unet import UNET
 import numpy as np
 
 from params import params
@@ -34,12 +34,12 @@ def main (args=None):
     entire_med_sdr_voc = []
     entire_med_sdr_acc = []
     
-    model = load_model("./ckpt/model")  
+    model = load_model("../models/myUnet/model")  
     mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
     c=0
     #a=0
     for count,filename in (enumerate(mus)):
-        print(filename, 'Filename')
+        print(filename,count, 'Filename')
         mixture = load_and_resample(filename)
         vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
 
@@ -109,7 +109,7 @@ def main (args=None):
         # Getting array of estimates
         c=c+1
         #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
-        #soundfile.write(f"audios_inference_normalizado/audio{c}.wav", output_voice, 22050)
+        soundfile.write(f"audios_inference_last_model/audio{c}.wav", output_voice, 22050)
         estimates = np.array([output_voice])[..., None]
 
         scores = museval.evaluate(
