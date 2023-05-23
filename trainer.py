@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim 
-from unet import UNET
+from resunet import UNET
 import numpy as np
 # from utils import (
 #     load_checkpoint,

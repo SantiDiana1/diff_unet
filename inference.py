@@ -3,7 +3,7 @@ from utils import load_and_resample, compute_signal_from_stft2, compute_stft, pr
 import math
 import torch
 import os
-from unet import UNET
+from resunet import UNET
 import numpy as np
 
 from params import params
