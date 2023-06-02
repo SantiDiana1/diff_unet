@@ -8,13 +8,30 @@ class RCB(nn.Module):
         self.block = nn.Sequential(
             nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Conv2d(in_channels, out_channels, kernel_size=3),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3,padding=1),
             nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3)
+            nn.Conv2d(out_channels, out_channels, kernel_size=3,padding=1)
         )
+        # self.norm = nn.BatchNorm2d(in_channels)
+        # self.relu = nn.LeakyReLU(negative_slope=0.01)
+        # self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,padding = 1)
+        # self.norm2 = nn.BatchNorm2d(out_channels)
+        # self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3)
 
     def forward(self,x):
+        # print(x.shape,'shape de x')
+        # x = self.norm(x)
+        # print(x.shape,'shape de x')
+        # x = self.relu(x)
+        # print(x.shape,'shape de x')
+        # x = self.conv1(x)
+        # print(x.shape,'shape de x')
+        # x = self.norm2(x)
+        # print(x.shape,'shape de x')
+        # x = self.conv2(x)
+        # print(x.shape,'shape de x')
+        # quit()
         return self.block(x)
 
 class UNET(nn.Module):
@@ -23,6 +40,10 @@ class UNET(nn.Module):
     ):
         super(UNET,self).__init__()
 
+
+        self.features = features
+        self.n_rcb_per_encoder = n_rcb_per_encoder
+        self.n_rcb_per_decoder = n_rcb_per_decoder
         self.downs_total = nn.ModuleList()
         self.downs_level = nn.ModuleList()
         self.ups_total = nn.ModuleList()
@@ -35,10 +56,10 @@ class UNET(nn.Module):
         ## Down part of the Unet.
         for feature in features: ## feature is out_channels. 
             for _ in range(n_rcb_per_encoder):  ## Según esto, in_channels cambia a feature en el primer RCB y se queda así hasta que en el siguiente bloque de encoder cambia features. 
-                self.downs_level.append(RCB(in_channels,feature))
+                self.downs_level.append(RCB(in_channels,feature)) ## downs_level es una lista de nn.Sequentials. 
                 in_channels=feature
-            self.downs_total.append(self.downs_level)
-            self.downs_level = nn.ModuleList()  ## Lo que hacemos aquí es añadir en cada nivel del encoder un downs_level que contiene 4 RCBs, para 
+            #self.downs_total.append(self.downs_level)
+            #self.downs_level = nn.ModuleList()  ## Lo que hacemos aquí es añadir en cada nivel del encoder un downs_level que contiene 4 RCBs, para 
             ## luego en el forward poder sacar bien la skip connection. 
 
          ## Bottleneck
@@ -50,13 +71,20 @@ class UNET(nn.Module):
             
         ## Up part 
 
+        # for feature in reversed(features): ## Aquí en cada iteración se añaden 2 elementos a self.ups.
+        #     self.ups_total.append(nn.ConvTranspose2d(feature*2,feature,kernel_size=2,stride=2))
+        #     self.ups_level.append(RCB(feature*2,feature)) ## Primer RCB del bloque donde se cambian los canales. 
+        #     for _ in range(n_rcb_per_decoder-1):
+        #         self.ups_level.append(RCB(feature,feature))
+        #     self.ups_total.append(self.ups_level)
+        #     self.ups_level = nn.ModuleList() ##Limpio para luego añadir a ups_total solo el nuevo nivel. 
+
         for feature in reversed(features): ## Aquí en cada iteración se añaden 2 elementos a self.ups.
-            self.ups_total.append(nn.ConvTranspose2d(feature*2,feature,kernel_size=2,stride=2))
+            self.ups_level.append(nn.ConvTranspose2d(feature*2,feature,kernel_size=2,stride=2))
             self.ups_level.append(RCB(feature*2,feature)) ## Primer RCB del bloque donde se cambian los canales. 
             for _ in range(n_rcb_per_decoder-1):
                 self.ups_level.append(RCB(feature,feature))
-            self.ups_total.append(self.ups_level)
-            self.ups_level = nn.ModuleList() ##Limpio para luego añadir a ups_total solo el nuevo nivel. 
+
         ## Out part. 
         for _ in range(n_rcb_per_decoder-1):
             self.out.append(RCB(features[0],features[0]))
@@ -73,24 +101,38 @@ class UNET(nn.Module):
         # x = self.preprocess(x)
         x = x.unsqueeze(1)
 
-        ## Down process. 
-        for down in self.downs_total: ## Debería tener 6 bloques que a su vez contienen 4 RCB cada uno. 
-            x = down(x)
-            skip_connections.append(x) ## Esto es el final de 4 RCBs. 
+        
+        for i in range(0,len(self.downs_level),4):
+            for levels in range(self.n_rcb_per_encoder):
+                down = self.downs_level[i+levels] ### Aquí seleccionamos cual es el siguiente bloque
+                #print(down,'down')
+                x = down(x)
+            skip_connections.append(x)
             x = self.pool(x)
-
+        
         ## Bottleneck.
-        for bottle in range(self.bottleneck):
+        for bottle in self.bottleneck:
             x = bottle(x)
-
+        
         skip_connections = skip_connections[::-1] ## Reverse the list of skip connections.
 
-        for idx in range(0,len(self.ups_total),2):
-            x = self.ups_total[idx](x)
-            skip_connection = skip_connections[idx//2] ## Addition of the skip connection before the DoubleConv.
+        print(self.ups_level)
+        quit()
+        
+        for idx in range(0,len(self.ups_level),5):
+            print(x.shape,'antes de trans')
+            x = self.ups_level[idx](x)
+            print(x.shape,'despues de trans')
+            
+            skip_connection = skip_connections[idx//5]
             concat_skip = torch.cat((skip_connection,x),dim=1)
-            x = self.ups_total[idx+1](concat_skip) ## Se aplica todo en la primera. 
+            print(concat_skip.shape,'shape concat')
+            for levels in range(self.n_rcb_per_decoder):
+                up = self.ups_level[idx+levels+1]
+                x = up(concat_skip) ## Se aplica todo en la primera. 
 
+        print('Acabado')
+        
         for out in range(self.out):
             x = out(x)
 
