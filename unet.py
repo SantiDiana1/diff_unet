@@ -51,7 +51,7 @@ class UNET(nn.Module):
             in_channels = feature
             
         ## Up part 
-
+        
         for feature in reversed(features):
             self.ups.append(
                 nn.ConvTranspose2d(
@@ -79,6 +79,8 @@ class UNET(nn.Module):
         x = self.bottleneck(x)
         skip_connections = skip_connections[::-1] ## Reverse the list of skip connections.
 
+        print(self.ups)
+        quit()
         for idx in range(0,len(self.ups),2):
             x = self.ups[idx](x) ## ConvTransposed 2d.
             skip_connection = skip_connections[idx//2] ## Addition of the skip connection before the DoubleConv.
