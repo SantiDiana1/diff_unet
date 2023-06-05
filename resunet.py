@@ -13,25 +13,25 @@ class RCB(nn.Module):
             nn.LeakyReLU(negative_slope=0.01),
             nn.Conv2d(out_channels, out_channels, kernel_size=3,padding=1)
         )
-        # self.norm = nn.BatchNorm2d(in_channels)
-        # self.relu = nn.LeakyReLU(negative_slope=0.01)
-        # self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,padding = 1)
-        # self.norm2 = nn.BatchNorm2d(out_channels)
-        # self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3)
 
     def forward(self,x):
-        # print(x.shape,'shape de x')
-        # x = self.norm(x)
-        # print(x.shape,'shape de x')
-        # x = self.relu(x)
-        # print(x.shape,'shape de x')
-        # x = self.conv1(x)
-        # print(x.shape,'shape de x')
-        # x = self.norm2(x)
-        # print(x.shape,'shape de x')
-        # x = self.conv2(x)
-        # print(x.shape,'shape de x')
-        # quit()
+        
+        return self.block(x)
+    
+class RCB2(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(RCB2, self).__init__()
+        self.block = nn.Sequential(
+            nn.BatchNorm2d(in_channels),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(in_channels, in_channels, kernel_size=3,padding=1),
+            nn.BatchNorm2d(in_channels),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3,padding=1)
+        )
+
+    def forward(self,x):
+        
         return self.block(x)
 
 class UNET(nn.Module):
@@ -81,9 +81,11 @@ class UNET(nn.Module):
 
         for feature in reversed(features): ## Aquí en cada iteración se añaden 2 elementos a self.ups.
             self.ups_level.append(nn.ConvTranspose2d(feature*2,feature,kernel_size=2,stride=2))
-            self.ups_level.append(RCB(feature*2,feature)) ## Primer RCB del bloque donde se cambian los canales. 
+            
             for _ in range(n_rcb_per_decoder-1):
-                self.ups_level.append(RCB(feature,feature))
+                self.ups_level.append(RCB(feature*2,feature*2))
+
+            self.ups_level.append(RCB2(feature*2,feature)) 
 
         ## Out part. 
         for _ in range(n_rcb_per_decoder-1):
@@ -105,7 +107,6 @@ class UNET(nn.Module):
         for i in range(0,len(self.downs_level),4):
             for levels in range(self.n_rcb_per_encoder):
                 down = self.downs_level[i+levels] ### Aquí seleccionamos cual es el siguiente bloque
-                #print(down,'down')
                 x = down(x)
             skip_connections.append(x)
             x = self.pool(x)
@@ -116,24 +117,20 @@ class UNET(nn.Module):
         
         skip_connections = skip_connections[::-1] ## Reverse the list of skip connections.
 
-        print(self.ups_level)
-        quit()
         
         for idx in range(0,len(self.ups_level),5):
-            print(x.shape,'antes de trans')
-            x = self.ups_level[idx](x)
-            print(x.shape,'despues de trans')
             
+            x = self.ups_level[idx](x)
             skip_connection = skip_connections[idx//5]
             concat_skip = torch.cat((skip_connection,x),dim=1)
-            print(concat_skip.shape,'shape concat')
+            
             for levels in range(self.n_rcb_per_decoder):
                 up = self.ups_level[idx+levels+1]
                 x = up(concat_skip) ## Se aplica todo en la primera. 
 
-        print('Acabado')
         
-        for out in range(self.out):
+        
+        for out in self.out:
             x = out(x)
 
         x = self.sigmoid(x)
@@ -141,16 +138,16 @@ class UNET(nn.Module):
         return result
     
 
-def test():
-    x = torch.randn((1,1,512,128))
-    model = UNET(in_channels=1,out_channels=1)
-    preds = model(x)
-    print(preds.shape)
-    print(x.shape)
-    assert preds.shape == x.shape 
+# def test():
+#     x = torch.randn((1,1,512,128))
+#     model = UNET(in_channels=1,out_channels=1)
+#     preds = model(x)
+#     print(preds.shape)
+#     print(x.shape)
+#     assert preds.shape == x.shape 
 
-if __name__ == "__main__":
-    test()
+# if __name__ == "__main__":
+#     test()
 
 
 ### ESTE ERROR ME PUEDE ESTAR SALIENDO QUIZÁ PORQUE TENGO IR DE UNO EN UNO EN EL FORWARD Y NO METERLE UN MODULE LIST DE MODULE LISTS 

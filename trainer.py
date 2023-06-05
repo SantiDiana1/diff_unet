@@ -19,6 +19,8 @@ import random
 import math
 import museval
 import soundfile
+from torchsummary import summary
+
 def _nested_map(struct, map_fn):
         if isinstance(struct, tuple):
             return tuple(_nested_map(x, map_fn) for x in struct)
@@ -41,6 +43,11 @@ class Learner():
         self.loss_fn = nn.L1Loss()
         self.step=0
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
+
+        ## Validation
+        self.vector_medians = [0]
+        self.best_SDR = 0
+        self.best_epoch = 0
 
     def state_dict(self): ## This returns a dictionary containing the current state of the model and optimizer, and some additional training parameters.
         # It is commonly used for save and load the state of a model during training or to transfer a model between different processes or machines. 
@@ -88,7 +95,8 @@ class Learner():
         mus=random.sample(mus,4)
         mus.append("/home/santi/datasets/musdb_test/raw_audio/Carlos Gonzalez - A Place For Us/mixture.wav")
         vector_medians= []
-        
+
+        sum = summary(self.model,input_size = (512,128))
 
         while True:
              with tqdm(total=len(self.trainset), desc=f"Epoch {self.step // len(self.trainset)}", leave=False) as pbar:
@@ -121,7 +129,8 @@ class Learner():
                 print("Validation loss:", np.mean(validation_loss))
 
                 if (self.step // len(self.trainset))%10==0:
-                    self.validation_inference(mus,vector_medians)
+                    vector_medians_val = self.validation_inference(mus,vector_medians)
+                    # vector_medians_train = self.validation_inference(trainset,vector_medians)
                 
     def train_step (self,features):
 
@@ -238,7 +247,7 @@ class Learner():
             # Getting array of estimates
             c=c+1
             epoch = self.step // len(self.trainset)
-            soundfile.write(f"audios/audio{epoch}_{c}.wav", output_voice, 22050)
+            soundfile.write(f"audios2/audio{epoch}_{c}.wav", output_voice, 22050)
             estimates = np.array([output_voice])[..., None]
 
             scores = museval.evaluate(
@@ -252,8 +261,25 @@ class Learner():
 
         median_sdr_voc=np.median(entire_med_sdr_voc)
         print('All median SDR for vocals:',median_sdr_voc)
-        vector_medians.append(median_sdr_voc)
-        print(vector_medians)
+        
+        previous_maximum=max(self.vector_medians)
+        print(previous_maximum,'previous maximum')
+
+        if median_sdr_voc>previous_maximum:
+            self.best_SDR=median_sdr_voc
+            #model=self.model_dir
+            self.save_to_checkpoint("weights_bestSDR")
+            self.best_epoch=self.step//len(self.trainset)
+            print(f'I have saved a new model with the best SDR. It corresponds to epoch {self.best_epoch} with {self.best_SDR} of SDR')
+        
+        print(f'The best model corresponds to epoch {self.best_epoch}')
+        self.vector_medians.append(median_sdr_voc)
+        print(self.vector_medians)
+
+        with open('./results/SDR.txt', 'w') as file:
+            file.write(str(self.vector_medians))
+
+        return vector_medians
 
 def train(args, params):
     trainset, testset = from_path(args.data_dir, params)  ## Create trainset and testset from the dataset class.
