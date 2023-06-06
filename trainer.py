@@ -143,7 +143,7 @@ class Learner():
         #     param.grad = None
 
         mixture = features["mix"].to(self.device)
-        target = features["vocals"].to(self.device)
+        target = features["bass"].to(self.device)
 
 
         training_data = mixture
@@ -165,7 +165,7 @@ class Learner():
         #     param.grad = None
 
         mixture = features["mix"].to(self.device)
-        target = features["vocals"].to(self.device)
+        target = features["bass"].to(self.device)
 
         training_data = mixture
         target_obj = target
@@ -184,7 +184,7 @@ class Learner():
         for count,filename in tqdm(enumerate(mus)):
             print(filename, 'Filename')
             mixture = load_and_resample(filename)
-            vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
+            bass = load_and_resample(filename.replace("mixture.wav", "bass.wav"))
 
             output_voice = []
             trim_low = 0
@@ -247,7 +247,7 @@ class Learner():
         
             #print('Now we calculate estimates and scores')
 
-            voc_ref = vocals[:output_voice.shape[0]].detach().numpy()
+            voc_ref = bass[:output_voice.shape[0]].detach().numpy()
             #print(voc_ref.shape,'voc ref shape')
             # Getting array of estimates
             c=c+1
@@ -261,11 +261,11 @@ class Learner():
             voc_sdr = scores[0][0]
             voc_sdr = np.round(np.median(voc_sdr[~np.isnan(voc_sdr)]), 3)
 
-            print("VOCALS ==> SDR:", voc_sdr) #, " SIR:", voc_sir, " SAR:", voc_sar)
+            print("BASS ==> SDR:", voc_sdr) #, " SIR:", voc_sir, " SAR:", voc_sar)
             entire_med_sdr_voc.append(voc_sdr)
 
         median_sdr_voc=np.median(entire_med_sdr_voc)
-        print('All median SDR for vocals:',median_sdr_voc)
+        print('All median SDR for bass:',median_sdr_voc)
         
         previous_maximum=max(self.vector_medians)
         print(previous_maximum,'previous maximum')
