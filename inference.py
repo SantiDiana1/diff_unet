@@ -42,7 +42,7 @@ def main (args=None):
     entire_med_sdr_voc = []
     entire_med_sdr_acc = []
 
-    bestsdr = True
+    bestsdr = False
 
     model = load_model("./ckpt2/model",bestsdr)  
     mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
@@ -119,7 +119,7 @@ def main (args=None):
         # Getting array of estimates
         #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
         c=c+1
-        soundfile.write(f"audios2/inference_bestmodel/audio{c}.wav", output_voice, 22050)
+        #soundfile.write(f"audios2/inference_bestmodel/audio{c}.wav", output_voice, 22050)
         estimates = np.array([output_voice])[..., None]
 
         scores = museval.evaluate(
