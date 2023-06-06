@@ -11,16 +11,24 @@ import museval
 import soundfile
 import torch.nn as nn
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def load_model(model_dir):
+def load_model(model_dir,bestsdr):
     device = torch.device('cuda')
     
-    if os.path.exists(f'{model_dir}/weights.pt'):
-        print('True')
-        checkpoint = torch.load(f'{model_dir}/weights.pt')
+    if bestsdr:
+        if os.path.exists(f'{model_dir}/weights_bestSDR.pt'):
+            print('True best SDR')
+            checkpoint = torch.load(f'{model_dir}/weights_bestSDR.pt')
+        else:
+            checkpoint = torch.load(model_dir)
     else:
-        checkpoint = torch.load(model_dir)
+        if os.path.exists(f'{model_dir}/weights.pt'):
+            print('True')
+            checkpoint = torch.load(f'{model_dir}/weights.pt')
+        else:
+            checkpoint = torch.load(model_dir)
+
     model = UNET().to(device)
     model.load_state_dict(checkpoint['model'])
     #model.eval()
@@ -33,13 +41,15 @@ def main (args=None):
 
     entire_med_sdr_voc = []
     entire_med_sdr_acc = []
-    
-    model = load_model("./ckpt/model")  
+
+    bestsdr = True
+
+    model = load_model("./ckpt2/model",bestsdr)  
     mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
     c=0
     #a=0
     for count,filename in (enumerate(mus)):
-        print(filename, 'Filename')
+        print(filename,count, 'Filename')
         mixture = load_and_resample(filename)
         vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
 
@@ -107,9 +117,9 @@ def main (args=None):
         voc_ref = vocals[:output_voice.shape[0]].detach().numpy()
         #print(voc_ref.shape,'voc ref shape')
         # Getting array of estimates
-        c=c+1
         #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
-        #soundfile.write(f"audios_inference_normalizado/audio{c}.wav", output_voice, 22050)
+        c=c+1
+        soundfile.write(f"audios2/inference_bestmodel/audio{c}.wav", output_voice, 22050)
         estimates = np.array([output_voice])[..., None]
 
         scores = museval.evaluate(

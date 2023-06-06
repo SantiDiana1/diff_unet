@@ -153,4 +153,4 @@ class UNET(nn.Module):
 ### ESTE ERROR ME PUEDE ESTAR SALIENDO QUIZÁ PORQUE TENGO IR DE UNO EN UNO EN EL FORWARD Y NO METERLE UN MODULE LIST DE MODULE LISTS 
 ### DIRECTAMENTE??
 
-### Por cierto, me falta el shortcut connection ?¿?¿
+### Por cierto, me falta el SHORTCUT CONNECTION 

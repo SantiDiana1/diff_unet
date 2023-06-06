@@ -120,7 +120,12 @@ class Learner():
                         "step": self.step})
                     epoch_loss += loss.item()
                 print("Train loss:", epoch_loss / len(self.trainset))
+
+                train_loss = epoch_loss / len(self.trainset)
                 
+                with open("results2/train_loss.txt", "a") as file:
+                    file.write(str(train_loss) + "\n")
+
                 validation_loss = []
                 for features in self.testset:
                     features = _nested_map(features, lambda x: x.to(self.device) if isinstance(x, torch.Tensor) else x)
@@ -276,7 +281,7 @@ class Learner():
         self.vector_medians.append(median_sdr_voc)
         print(self.vector_medians)
 
-        with open('./results/SDR.txt', 'w') as file:
+        with open('./results2/SDR.txt', 'w') as file:
             file.write(str(self.vector_medians))
 
         return vector_medians

@@ -2,4 +2,7 @@ audios
 ckpt
 ckpt2
 audios2
-__pychache__
+__pycache__
+results
+models
+results2
