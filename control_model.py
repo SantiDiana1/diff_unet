@@ -47,7 +47,7 @@ class CNN_CONTROL(nn.Module): ## Hay que revisar esto bien.
         self.gammas = nn.Linear(n_filters[-1], n_conditions)
         self.betas = nn.Linear(n_filters[-1], n_conditions)
         
-        # Initialize the weights
+        
         self._init_weights()
         
     def _init_weights(self):
