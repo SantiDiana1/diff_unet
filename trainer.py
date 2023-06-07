@@ -3,6 +3,7 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim 
 from unet import UNET
+#from unet_olga import UNET
 import numpy as np
 # from utils import (
 #     load_checkpoint,
@@ -120,7 +121,7 @@ class Learner():
                     validation_loss.append(loss.item())
                 print("Validation loss:", np.mean(validation_loss))
 
-                if (self.step // len(self.trainset))%10==0:
+                if (self.step // len(self.trainset))%20==0:
                     self.validation_inference(mus,vector_medians)
                 
     def train_step (self,features):
@@ -238,7 +239,7 @@ class Learner():
             # Getting array of estimates
             c=c+1
             epoch = self.step // len(self.trainset)
-            soundfile.write(f"audios/audio{epoch}_{c}.wav", output_voice, 22050)
+            soundfile.write(f"audios3/audio{epoch}_{c}.wav", output_voice, 22050)
             estimates = np.array([output_voice])[..., None]
 
             scores = museval.evaluate(
