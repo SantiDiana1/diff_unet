@@ -42,7 +42,7 @@ def main (args=None):
     entire_med_sdr_voc = []
     entire_med_sdr_acc = []
 
-    bestsdr = False
+    bestsdr = True
 
     model = load_model("./ckpt2/model",bestsdr)  
     mus = glob.glob("/home/santi/datasets/musdb_train_22050/*/*/mixture.wav")
