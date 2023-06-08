@@ -26,7 +26,7 @@ class DoubleConv(nn.Module):
     def forward(self,x,emb):
         
         x = x.to("cuda")
-        print(x.shape, 'Shape de x')
+        
         x = self.conv(x)
         if emb is not None:
             emb_out = self.emb_layers(emb)
@@ -100,23 +100,20 @@ class UNET(nn.Module):
             x = down(x,emb)
             skip_connections.append(x)
             x = self.pool(x)
-        print('Pre bottleneck')
+        
         x = self.bottleneck(x,emb)
         skip_connections = skip_connections[::-1] ## Reverse the list of skip connections.
-        print('PASADO #########################')
-
+        
         for idx in range(0,len(self.ups),2):
             x = self.ups[idx](x) ## ConvTransposed 2d.
             skip_connection = skip_connections[idx//2] ## Addition of the skip connection before the DoubleConv.
             concat_skip = torch.cat((skip_connection,x),dim=1)
             x = self.ups[idx+1](concat_skip,emb) ## DoubleConv. 
 
-        print('PASADO ################')
-
         x = self.out(x)
         x = self.sigmoid(x)
         result = x * x_input
-        result = result.squeeze(1)
+
         return result
     
 

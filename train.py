@@ -16,9 +16,9 @@ if __name__ == '__main__': ## As it is the file to run, we add this line and we 
     parser.add_argument('--diffusion', default = True, help= 'do you wanna use diffusion?')
     parser.add_argument('--model-dir', default="./ckpt/",
         help='directory in which to store model checkpoints and training logs')
-    parser.add_argument('--data-dir', default=None,
+    parser.add_argument('--data-dir', default="../datasets/musdb",
         help='directories from which to read .wav files for training')
-    parser.add_argument('--max-steps', default=None, type= int,
+    parser.add_argument('--max-steps', default=500000, type= int,
         help='maximum number of training steps')
     parser.add_argument('--fp16',action='store_true', default=False,
         help='use 16-bit floating point operations for training')

@@ -21,7 +21,7 @@ class ReverseProcess:
             checkpoint = torch.load(model_dir)
         self.model = UNET().to(device)
         self.model.load_state_dict(checkpoint['model'])
-        self.model.eval()
+        #self.model.eval()
 
     def predict(self, signal, device="cpu"):
         """Reverse the process of the model.
@@ -41,7 +41,7 @@ class ReverseProcess:
             # print(signal.squeeze(1).shape, 'shape con squeeze 1')
             # quit()
             signal = self.model(signal.to(self.device), base * t).squeeze(0).cpu().detach()
-            signal = self.model(signal.to(self.device), base * t).cpu().detach()
+            #signal = self.model(signal.to(self.device), base * t).cpu().detach()
             #print(signal.shape)
             #print(torch.cuda.memory_allocated(0))
         return signal.to(self.device)

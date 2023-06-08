@@ -114,7 +114,7 @@ def main (args=None):
         # Getting array of estimates
         c=c+1
         #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
-        soundfile.write(f"audios_inference_last_model/audio{c}.wav", output_voice, 22050)
+        soundfile.write(f"audios_diff/audio{c}.wav", output_voice, 22050)
         estimates = np.array([output_voice])[..., None]
 
         scores = museval.evaluate(

@@ -132,8 +132,8 @@ class Learner():
                     validation_loss.append(loss.item())
                 print("Validation loss:", np.mean(validation_loss))
 
-                # if (self.step // len(self.trainset))%5==0:
-                #     self.validation_inference(mus)
+                if (self.step // len(self.trainset))%10==0:
+                    self.validation_inference(mus)
                 
     def train_step (self,features):
 
@@ -338,7 +338,7 @@ class Learner():
         self.vector_medians.append(median_sdr_voc)
         print(self.vector_medians)
 
-        with open('./results/SDR.txt', 'w') as file:
+        with open('./results_diff/SDR.txt', 'w') as file:
             file.write(str(self.vector_medians))
         
 
