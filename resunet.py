@@ -111,9 +111,11 @@ class UNET(nn.Module):
             skip_connections.append(x)
             x = self.pool(x)
         
+        
         ## Bottleneck.
         for bottle in self.bottleneck:
             x = bottle(x)
+        
         
         skip_connections = skip_connections[::-1] ## Reverse the list of skip connections.
 
@@ -132,9 +134,11 @@ class UNET(nn.Module):
         
         for out in self.out:
             x = out(x)
-
+        
+        
         x = self.sigmoid(x)
         result = x * x_input
+        
         return result
     
 
