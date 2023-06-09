@@ -7,7 +7,7 @@ from params import params
 import os
 
 def main(args):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     train(args, params)  ## Train.py file just calls train from learner.py to start training.
 
 

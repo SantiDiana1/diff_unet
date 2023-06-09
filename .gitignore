@@ -10,3 +10,9 @@ results_pruebas
 results
 pruebas
 results_diff
+ckpt_diff_resunet
+audios_diff
+audios_diff_resunet
+audios_diff_resunet_8steps
+ckpt_diff_8steps
+bohemian_rhapsody.wav

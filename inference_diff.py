@@ -14,16 +14,23 @@ import torch.nn as nn
 from reverser import ReverseProcess
 from params import params
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def load_model(model_dir):
+def load_model(model_dir,bestsdr):
     device = torch.device('cuda')
-    
-    if os.path.exists(f'{model_dir}/weights.pt'):
-        print('True')
-        checkpoint = torch.load(f'{model_dir}/weights.pt')
+
+    if bestsdr:
+        if os.path.exists(f'{model_dir}/weights_bestSDR.pt'):
+            print('True best SDR')
+            checkpoint = torch.load(f'{model_dir}/weights_bestSDR.pt')
+        else:
+            checkpoint = torch.load(model_dir)
     else:
-        checkpoint = torch.load(model_dir)
+        if os.path.exists(f'{model_dir}/weights.pt'):
+            print('True')
+            checkpoint = torch.load(f'{model_dir}/weights.pt')
+        else:
+            checkpoint = torch.load(model_dir)
     model = UNET().to(device)
     model.load_state_dict(checkpoint['model'])
     #model.eval()
@@ -34,8 +41,9 @@ def main (args=None):
 
     entire_med_sdr_voc = []
     
+    bestsdr = True
     
-    model = load_model("./ckpt_diff/model")  
+    model = load_model("./models/resunet/model",bestsdr)  
     mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
     c=0
 

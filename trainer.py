@@ -3,7 +3,8 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim 
 #from unet import UNET
-from time_unet import UNET
+#from time_unet import UNET
+from time_resunet import UNET
 import numpy as np
 from reverser import ReverseProcess
 
@@ -199,7 +200,7 @@ class Learner():
             self.noise_schedule_voc = self.noise_schedule_voc.to(self.device)
 
             with self.autocast:
-                t = torch.randint(1, self.params.iters + 1, [N], device=mixture.device)
+                t = torch.randint(1, self.params.iters + 1, [N], device=mixture.device) ##Vector de 16 valores para los 16 batches. O sea, que cada imagen del batch tiene un t diferente.
                 t_next = t - 1
                 # Getting noise level at given timesteps
                 noise_level_mix = self.noise_schedule_mix[t].unsqueeze(1).unsqueeze(2) 
@@ -309,7 +310,7 @@ class Learner():
             # Getting array of estimates
             c=c+1
             epoch = self.step // len(self.trainset)
-            soundfile.write(f"audios_diff/audio{epoch}_{c}.wav", output_voice, 22050)
+            soundfile.write(f"audios_diff_resunet_8steps/audio{epoch}_{c}.wav", output_voice, 22050)
             estimates = np.array([output_voice])[..., None]
 
             scores = museval.evaluate(
@@ -338,7 +339,7 @@ class Learner():
         self.vector_medians.append(median_sdr_voc)
         print(self.vector_medians)
 
-        with open('./results_diff/SDR.txt', 'w') as file:
+        with open('./audios_diff_resunet_8steps/results_diff/SDR.txt', 'w') as file:
             file.write(str(self.vector_medians))
         
 
