@@ -11,3 +11,10 @@ pruebas
 results_pruebas
 audios_pruebas
 ckpt_diff
+aaa.py
+bohemian_rhapsody.wav
+audio.wav
+audios_diff_resunet
+audios_diff_resunet_8steps
+ckpt_diff_8steps
+ckpt_diff_resunet

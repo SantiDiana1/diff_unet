@@ -45,13 +45,15 @@ def main (args=None):
     bestsdr = True
 
     model = load_model("./models/resunet/model",bestsdr)  
-    mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
+    #mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
+    mus = ("/home/santi/MyUnet/bohemian_rhapsody.wav")
+    
     c=0
     #a=0
     for count,filename in (enumerate(mus)):
         print(filename,count, 'Filename')
         mixture = load_and_resample(filename)
-        vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
+        # vocals = load_and_resample(filename.replace("mixture.wav", "vocals.wav"))
 
         output_voice = []
         trim_low = 0
@@ -113,26 +115,26 @@ def main (args=None):
                 torch.cuda.empty_cache()
     
         #print('Now we calculate estimates and scores')
+        soundfile.write(f"audio{c}.wav", output_voice, 22050)
+    #     voc_ref = vocals[:output_voice.shape[0]].detach().numpy()
+    #     #print(voc_ref.shape,'voc ref shape')
+    #     # Getting array of estimates
+    #     #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
+    #     c=c+1
+    #     #soundfile.write(f"audios2/inference_bestmodel/audio{c}.wav", output_voice, 22050)
+    #     estimates = np.array([output_voice])[..., None]
 
-        voc_ref = vocals[:output_voice.shape[0]].detach().numpy()
-        #print(voc_ref.shape,'voc ref shape')
-        # Getting array of estimates
-        #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
-        c=c+1
-        #soundfile.write(f"audios2/inference_bestmodel/audio{c}.wav", output_voice, 22050)
-        estimates = np.array([output_voice])[..., None]
-
-        scores = museval.evaluate(
-            np.array([voc_ref])[..., None], estimates, win=22050, hop=22050)
+    #     scores = museval.evaluate(
+    #         np.array([voc_ref])[..., None], estimates, win=22050, hop=22050)
         
-        voc_sdr = scores[0][0]
-        voc_sdr = np.round(np.median(voc_sdr[~np.isnan(voc_sdr)]), 3)
+    #     voc_sdr = scores[0][0]
+    #     voc_sdr = np.round(np.median(voc_sdr[~np.isnan(voc_sdr)]), 3)
 
-        print("VOCALS ==> SDR:", voc_sdr) #, " SIR:", voc_sir, " SAR:", voc_sar)
-        entire_med_sdr_voc.append(voc_sdr)
+    #     print("VOCALS ==> SDR:", voc_sdr) #, " SIR:", voc_sir, " SAR:", voc_sar)
+    #     entire_med_sdr_voc.append(voc_sdr)
 
-    median_sdr_voc=np.median(entire_med_sdr_voc)
-    print('All median SDR for vocals:',median_sdr_voc)
+    # median_sdr_voc=np.median(entire_med_sdr_voc)
+    # print('All median SDR for vocals:',median_sdr_voc)
     
 
 if __name__ == '__main__':
