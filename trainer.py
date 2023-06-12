@@ -49,7 +49,7 @@ class Learner():
         self.noise_schedule_voc = torch.tensor(
             np.linspace(1, 0, self.params.iters + 1).astype(np.float32))
         
-
+    
         
         ## Validation
         self.vector_medians = [0]
@@ -125,6 +125,9 @@ class Learner():
                         "step": self.step})
                     epoch_loss += loss.item()
                 print("Train loss:", epoch_loss / len(self.trainset))
+
+                with open('./audios_diff_resunet_8steps/results_diff/train_loss.txt', 'a') as file:
+                    file.write(str(epoch_loss / len(self.trainset)) + '\n')
                 
                 validation_loss = []
                 for features in self.testset:

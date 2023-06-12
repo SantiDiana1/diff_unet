@@ -3,8 +3,10 @@ from utils import load_and_resample, compute_signal_from_stft2, compute_stft, pr
 import math
 import torch
 import os
+import librosa
+import matplotlib.pyplot as plt
 #from unet import UNET
-from time_unet import UNET
+from time_resunet import UNET
 import numpy as np
 
 from params import params
@@ -14,7 +16,7 @@ import torch.nn as nn
 from reverser import ReverseProcess
 from params import params
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def load_model(model_dir,bestsdr):
     device = torch.device('cuda')
@@ -37,13 +39,14 @@ def load_model(model_dir,bestsdr):
     return model
 
 
+
 def main (args=None):
 
     entire_med_sdr_voc = []
     
-    bestsdr = True
+    bestsdr = False
     
-    model = load_model("./models/resunet/model",bestsdr)  
+    model = load_model("./models/diff_resunet_12steps/model",bestsdr)  
     mus = glob.glob("/home/santi/datasets/musdb_test/*/*/mixture.wav")
     c=0
 
@@ -122,7 +125,7 @@ def main (args=None):
         # Getting array of estimates
         c=c+1
         #output_voice= (output_voice * max(abs(voc_ref)) / max(abs(output_voice)))
-        soundfile.write(f"audios_diff/audio{c}.wav", output_voice, 22050)
+        soundfile.write(f"audios_diff_resunet/audios_best_SDR/audio{c}.wav", output_voice, 22050)
         estimates = np.array([output_voice])[..., None]
 
         scores = museval.evaluate(
@@ -136,6 +139,9 @@ def main (args=None):
 
     median_sdr_voc=np.median(entire_med_sdr_voc)
     print('All median SDR for vocals:',median_sdr_voc)
+
+    with open('./audios_diff_resunet/audios_best_SDR/SDR.txt', 'w') as file:
+            file.write(str(self.vector_medians))
     
 
 if __name__ == '__main__':
