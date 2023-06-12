@@ -42,7 +42,7 @@ class Learner():
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
         self.autocast = torch.cuda.amp.autocast(enabled=kwargs.get("fp16", False))
         self.diffusion = diffusion
-
+        
 
         self.noise_schedule_mix = torch.tensor(
             np.linspace(1, 0, self.params.iters + 1).astype(np.float32))  ##tensor([1.0000, 0.9167, 0.8333, 0.7500, 0.6667, 0.5833, 0.5000, 0.4167, 0.333, 0.2500, 0.1667, 0.0833, 0.0000])
@@ -279,9 +279,9 @@ class Learner():
                     mix_phase = mix_phase[:, :, :new_len]
                     mix_mag=mix_mag.to("cuda")
                     mix_phase=mix_phase.to("cuda")
-                    
+                    epoch = (self.step) // (len(self.trainset))
                     #mix_mag=mix_mag.unsqueeze(1) #TODO: he añadido un unsqueeze porque sino peta el predict. 
-                    diff_res = reverse_process.predict(mix_mag)
+                    diff_res = reverse_process.predict(mix_mag,epoch)
 
                     output_signal = diff_res[:, :mix_mag.shape[1], :]
                     #print(output_signal.shape,'shape stft')
