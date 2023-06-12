@@ -38,7 +38,8 @@ class Dataset(torch.utils.data.Dataset):
                 self.bass_files = [x.replace("mixture.wav", "bass.wav") for x in self.mix_files]
                 self.accomp_files = [x.replace("mixture.wav", "accompaniment.wav") for x in self.mix_files]
                 
-
+        print('Mix files',(len(self.mix_files)))
+        print('BASS FILES',(len(self.bass_files)))
     def __len__(self):
         return len(self.mix_files)
 
