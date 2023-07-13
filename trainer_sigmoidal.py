@@ -48,7 +48,8 @@ class Learner():
             np.linspace(1, 0, self.params.iters + 1).astype(np.float32))  ##tensor([1.0000, 0.9167, 0.8333, 0.7500, 0.6667, 0.5833, 0.5000, 0.4167, 0.333, 0.2500, 0.1667, 0.0833, 0.0000])
         self.noise_schedule_voc = torch.tensor(
             np.linspace(1, 0, self.params.iters + 1).astype(np.float32))
-        
+        self.noise_schedule_mix = 1 / (1 + np.exp(-self.noise_schedule_mix))
+        self.noise_schedule_voc = 1 / (1 + np.exp(-self.noise_schedule_voc))
     
         
         ## Validation
@@ -126,7 +127,7 @@ class Learner():
                     epoch_loss += loss.item()
                 print("Train loss:", epoch_loss / len(self.trainset))
 
-                with open('./audios_diff_resunet_8steps_lineal/results_diff/train_loss.txt', 'a') as file:
+                with open('./audios_diff_resunet_8steps_sigmoidal/results_diff/train_loss.txt', 'a') as file:
                     file.write(str(epoch_loss / len(self.trainset)) + '\n')
                 
                 validation_loss = []
@@ -325,7 +326,7 @@ class Learner():
             # Getting array of estimates
             c=c+1
             epoch = self.step // len(self.trainset)
-            soundfile.write(f"audios_diff_resunet_8steps_lineal/audio{epoch}_{c}.wav", output_voice, 22050)
+            soundfile.write(f"audios_diff_resunet_8steps_sigmoidal/audio{epoch}_{c}.wav", output_voice, 22050)
             estimates = np.array([output_voice])[..., None]
 
             scores = museval.evaluate(
@@ -354,7 +355,7 @@ class Learner():
         self.vector_medians.append(median_sdr_voc)
         print(self.vector_medians)
 
-        with open('./audios_diff_resunet_8steps_lineal/results_diff/SDR.txt', 'w') as file:
+        with open('./audios_diff_resunet_8steps_sigmoidal/results_diff/SDR.txt', 'w') as file:
             file.write(str(self.vector_medians))
         
 

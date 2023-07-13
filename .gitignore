@@ -16,3 +16,11 @@ ckpt_diff_8steps
 bohemian_rhapsody.wav
 specs
 specs_change
+ckpt_bass/
+results2/
+__pycache__/trainer_sigmoidal.cpython-38.pyc
+audios_diff_resunet_8steps_lineal/
+audios_diff_resunet_8steps_sigmoidal/
+ckpt_lineal/
+ckpt_sigmoidal/
+
