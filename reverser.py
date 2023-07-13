@@ -41,7 +41,7 @@ class ReverseProcess:
         self.model.load_state_dict(checkpoint['model'])
         #self.model.eval()
 
-    def predict(self, signal, epoch,device="cpu"):
+    def predict(self, signal,device="cpu"):
         """Reverse the process of the model.
         Args:
             model: torch.nn.Module, model to reverse.
@@ -64,7 +64,7 @@ class ReverseProcess:
 
             
             a = a+1
-            save_stft_image(signal,f'audios_diff_resunet_8steps/results_diff/specs/spec{a}_{epoch}.png')
+            #save_stft_image(signal,f'audios_diff_resunet_8steps/results_diff/specs/spec{a}_{epoch}.png')
             # previous_signal = signal
             # print(np.mean(np.array(signal)),'C',a)
             # # print(signal.shape)
