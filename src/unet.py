@@ -10,23 +10,23 @@ class DoubleConv(nn.Module):
             nn.Conv2d(in_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
-            # nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False),
-            # nn.BatchNorm2d(out_channels),
-            # nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
         )
 
-        # self.conv1= nn.Conv2d(in_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False)
-        # self.norm= nn.BatchNorm2d(out_channels)
-        # self.relu = nn.ReLU(inplace=True)
-        # self.conv2 = nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False)
+        self.conv1= nn.Conv2d(in_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False)
+        self.norm= nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(out_channels,out_channels,kernel_size=3,stride=1,padding=1,bias=False)
 
     def forward(self,x):
-    #     x = self.conv1(x)
-    #     x = self.norm(x)
-    #     x = self.relu(x)
-    #     x = self.conv2(x)
-    #     x = self.norm(x)
-    #     x = self.relu(x)
+        x = self.conv1(x)
+        x = self.norm(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.norm(x)
+        x = self.relu(x)
 
         return self.conv(x)
     
@@ -43,7 +43,7 @@ class UNET(nn.Module):
         self.pool = nn.MaxPool2d(kernel_size=2,stride=2)
 
         # ## Preprocessing
-        # self.preprocess = nn.Conv2d(in_channels,model_channels,kernel_size=3,stride=1,padding=1,bias=False)
+        self.preprocess = nn.Conv2d(in_channels,model_channels,kernel_size=3,stride=1,padding=1,bias=False)
 
 
         ## Down part of the Unet.
@@ -94,13 +94,13 @@ class UNET(nn.Module):
         return result
     
 
-# def test():
-#     x = torch.randn((1,1,512,128))
-#     model = UNET(in_channels=1,out_channels=1)
-#     preds = model(x)
-#     print(preds.shape)
-#     print(x.shape)
-#     assert preds.shape == x.shape 
+def test():
+    x = torch.randn((1,1,512,128))
+    model = UNET(in_channels=1,out_channels=1)
+    preds = model(x)
+    print(preds.shape)
+    print(x.shape)
+    assert preds.shape == x.shape 
 
-# if __name__ == "__main__":
-#     test()
+if __name__ == "__main__":
+    test()
